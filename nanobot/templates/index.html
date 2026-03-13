@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nanobot AI Control Center</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://unpkg.com/htmx.org/dist/ext/sse.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .chat-height { height: calc(100vh - 180px); }
+        .cursor-blink::after { content: '|'; animation: blink 1s infinite; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+    </style>
+</head>
+<body class="bg-[#0D1117] text-gray-100 font-sans h-screen overflow-hidden">
+
+    <div class="flex h-full">
+        <aside class="w-64 bg-[#161B22] border-r border-gray-800 p-5 hidden lg:flex flex-col">
+            <div class="flex items-center gap-3 mb-10">
+                <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-bold">N</div>
+                <span class="text-xl font-semibold tracking-tight">Nanobot</span>
+            </div>
+            
+            <nav class="flex-1 space-y-2">
+                <div class="text-[10px] uppercase text-gray-500 font-bold tracking-widest mb-4">System Status</div>
+                <div class="p-3 bg-gray-800/50 rounded-xl border border-gray-700">
+                    <p class="text-xs text-blue-400">Primary Agent</p>
+                    <p class="text-sm font-medium">Chinese Multi-Agent</p>
+                </div>
+            </nav>
+        </aside>
+
+        <main class="flex-1 flex flex-col">
+            <header class="h-16 border-b border-gray-800 flex items-center px-6 justify-between">
+                <span class="text-sm font-medium text-gray-400">New Session</span>
+                <span class="text-xs bg-green-500/10 text-green-500 px-2 py-1 rounded-full border border-green-500/20">Online</span>
+            </header>
+
+            <div id="chat-display" class="chat-height overflow-y-auto p-6 space-y-6">
+                <div class="max-w-3xl mx-auto text-center py-20">
+                    <h2 class="text-4xl font-bold text-white mb-4">Nanobot Interface</h2>
+                    <p class="text-gray-400">Powered by HKUDS Hierarchical Multi-Agent Framework</p>
+                </div>
+            </div>
+
+            <div class="p-6 bg-gradient-to-t from-[#0D1117] via-[#0D1117] to-transparent">
+                <div class="max-w-3xl mx-auto">
+                    <form id="chat-form" class="relative">
+                        <input type="text" id="user-input" name="prompt" required
+                               class="w-full bg-[#21262D] border border-gray-700 rounded-2xl py-4 px-6 pr-14 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all shadow-2xl"
+                               placeholder="Message Nanobot...">
+                        
+                        <button type="button" onclick="sendPrompt()"
+                                class="absolute right-3 top-3 bg-white text-black p-2 rounded-xl hover:bg-blue-600 hover:text-white transition-all">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        function sendPrompt() {
+            const input = document.getElementById('user-input');
+            const display = document.getElementById('chat-display');
+            const prompt = input.value.trim();
+            if (!prompt) return;
+
+            // 1. Add User Message
+            const userMsg = `
+                <div class="flex justify-end animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    <div class="bg-blue-600 text-white px-5 py-3 rounded-2xl max-w-[80%] shadow-lg text-sm">
+                        ${prompt}
+                    </div>
+                </div>`;
+            display.insertAdjacentHTML('beforeend', userMsg);
+
+            // 2. Add Bot Container with SSE connection
+            const botId = 'bot-' + Date.now();
+            const botMsg = `
+                <div class="flex justify-start animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    <div class="bg-[#21262D] border border-gray-700 text-gray-100 px-5 py-3 rounded-2xl max-w-[80%] shadow-lg text-sm leading-relaxed"
+                         hx-ext="sse" 
+                         sse-connect="/chat-stream?prompt=${encodeURIComponent(prompt)}" 
+                         sse-swap="message" 
+                         hx-swap="beforeend">
+                         <span class="cursor-blink"></span>
+                    </div>
+                </div>`;
+            display.insertAdjacentHTML('beforeend', botMsg);
+
+            // 3. Reset & Scroll
+            input.value = '';
+            display.scrollTop = display.scrollHeight;
+
+            // 4. Activate HTMX for the new element
+            htmx.process(display);
+
+            // 5. Handle stream end
+            document.body.addEventListener('htmx:sseBeforeMessage', function(e) {
+                if (e.detail.type === 'end') {
+                    const blinks = document.querySelectorAll('.cursor-blink');
+                    blinks.forEach(b => b.classList.remove('cursor-blink'));
+                }
+            });
+        }
+    </script>
+</body>
+</html>
