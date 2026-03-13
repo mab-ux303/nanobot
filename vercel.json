@@ -3,7 +3,7 @@
     { "source": "/(.*)", "destination": "/nanobot/api/index" }
   ],
   "functions": {
-    "api/index.py": {
+    "nanobot/api/index.py": {
       "runtime": "vercel-python@3.0.0"
     }
   }
